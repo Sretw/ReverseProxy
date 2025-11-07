@@ -23,6 +23,7 @@ services:
       - ACME_EMAIL=nelson@sretw.com # email address which should be used for acme, currently optional, may be required in the future, so I recommend you to enter your email here, optional for letsencrypt, but required for zerossl and google public ca
       - LOGROTATE=true # for crowdsec https://www.crowdsec.net/blog/web-server-security-with-npmplus-and-crowdsec or https://github.com/ZoeyVid/NPMplus?tab=readme-ov-file#crowdsec
       - NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=false
+      - - SKIP_IP_RANGES=false # for cloudflare dns to remote access npmplus admin webUI
     networks:
       - npm_proxy_network
 
