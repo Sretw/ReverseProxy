@@ -1,0 +1,27 @@
+services:
+  caddy:
+    image: tomneo2004/caddyx:latest
+    container_name: caddy
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80"
+      - "80:80/udp"
+      - "443:443"
+      - "443:443/udp"
+      - "2019:2019"
+    environment:
+      CADDY_ADMIN: 0.0.0.0:2019
+    volumes:
+      #- <Path_To_Storage>:/etc/caddy
+      - <Path_To_Storage>/site:/srv
+      - <Path_To_Storage>/data:/data
+      - <Path_To_Storage>/config:/config
+    command: caddy run --config /etc/caddy/Caddyfile --watch
+    networks:
+      - proxy_network
+
+networks:
+  proxy_network:
+    driver: bridge

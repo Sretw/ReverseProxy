@@ -1,0 +1,2 @@
+2025/11/06 22:30:55 [error] 258#258: *124041 lua tcp socket read timed out, client: 172.18.0.1, server: sretw1822.i234.me, request: "GET /php_info.php HTTP/1.1", host: "sretw1822.i234.me", referrer: "https://www.google.com/"
+2025/11/06 22:30:55 [error] 258#258: *124041 [lua] live.lua:39: live_query(): failed to query LAPI http://crowdsec:8080/v1/decisions?ip=172.18.0.1: timeout, client: 172.18.0.1, server: sretw1822.i234.me, request: "GET /php_info.php HTTP/1.1", host: "sretw1822.i234.me", referrer: "https://www.google.com/"

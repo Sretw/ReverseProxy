@@ -1,0 +1,13 @@
+{
+debug
+
+    ## dev use
+    #acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+    ## prod use
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
+
+    servers {
+    	protocols h1 h2 h2c h3
+    }
+
+}

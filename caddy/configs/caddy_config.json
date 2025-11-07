@@ -1,0 +1,54 @@
+{
+  "admin": {},
+  "logging": {
+    "logs": {
+      "default": {
+        "level": "DEBUG"
+      }
+    }
+  },
+  "apps": {
+    "tls": {
+      "automation": {
+        "policies": [
+          {
+            "issuers": [
+              {
+                "module": "acme",
+                "ca": "https://acme-v02.api.letsencrypt.org/directory",
+                "challenges": {
+                  "dns": {
+                    "provider": {
+                      "name": "cloudflare",
+                      "api_token": "n6hrZTlfhmc6X7znpMkALs44rNZVY1XB1Db83-FW"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "http": {
+      "servers": {
+        "serv0": {
+          "listen": [":443", ":80"],
+          "protocols": ["h1", "h2", "h2c", "h3"],
+          "routes": [
+            {
+              "terminal": true,
+              "match": [{ "host": ["borgwarehouseui.sretw.com"] }],
+              "handle": [
+                {
+                  "handler": "reverse_proxy",
+                  "upstreams": [{ "dial": "borgwarehouse:3000" }]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
