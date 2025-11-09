@@ -1,2 +1,0 @@
-2025/11/06 22:04:27 [error] 262#262: *121090 lua tcp socket read timed out, client: 172.18.0.1, server: mailcow.sretw.com, request: "GET /admin/.env.save HTTP/1.1", host: "mailcow.sretw.com", referrer: "https://www.google.com/"
-2025/11/06 22:04:27 [error] 262#262: *121090 [lua] live.lua:39: live_query(): failed to query LAPI http://crowdsec:8080/v1/decisions?ip=172.18.0.1: timeout, client: 172.18.0.1, server: mailcow.sretw.com, request: "GET /admin/.env.save HTTP/1.1", host: "mailcow.sretw.com", referrer: "https://www.google.com/"

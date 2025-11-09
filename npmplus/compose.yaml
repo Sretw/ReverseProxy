@@ -5,61 +5,34 @@ services:
   ## Enhanced Nginx Proxy Manager
   ##
   ## Replace vanilla Nginx Proxy Manager in order to work with Crowdsec
+  ##
+  ## Note: network_mode must set to host
   npmplus:
     container_name: npm
     image: docker.io/zoeyvid/npmplus:latest # or ghcr.io/zoeyvid/npmplus:latest
     restart: always
-    ports:
-      - "8080:80" # Public HTTP Port
-      - "444:443" # Public HTTPS Port
+    ports: # This is not required since network mode is set to host
+      - "8080:8080" # Public HTTP Port
+      - "8443:8440" # Public HTTPS Port
       - "81:81" # Admin Web Port
       - "33080:33080" # For netbird relay
     volumes:
       - /volume2/docker/npmplus/data:/data
-      # - /volume2/docker/npm/letsencrypt:/etc/letsencrypt # Only needed for first time migration from original nginx-proxy-manager to this fork, remove after migration
+      - /volume2/docker/npmplus/letsencrypt:/etc/letsencrypt # Only needed for first time migration from original nginx-proxy-manager to this fork, remove after migration
       # - "shm-volume:/dev/shm/check-point" # required if you want to use the openappsec attachment module, also enable this volume at the end of this compose.yaml
     environment:
+      - HTTP_PORT=8080 # listen on port 8080
+      - HTTPS_PORT=8443 # listen on port 8443
       - TZ=Asia/Taipei # set timezone, required, set it to one of the values from the "TZ identifier" https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
       - ACME_EMAIL=nelson@sretw.com # email address which should be used for acme, currently optional, may be required in the future, so I recommend you to enter your email here, optional for letsencrypt, but required for zerossl and google public ca
       - LOGROTATE=true # for crowdsec https://www.crowdsec.net/blog/web-server-security-with-npmplus-and-crowdsec or https://github.com/ZoeyVid/NPMplus?tab=readme-ov-file#crowdsec
-      - NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=false
-      - - SKIP_IP_RANGES=false # for cloudflare dns to remote access npmplus admin webUI
-    networks:
-      - npm_proxy_network
-
-  ####
-  ## Valina Nginx Proxy Manager
-  ## No longer use
-  # npm:
-  #   image: lepresidente/nginxproxymanager:latest
-  #   container_name: "npm"
-  #   restart: unless-stopped
-  #   cap_add:
-  #     - NET_ADMIN
-  #     - NET_BIND_SERVICE
-  #   ports:
-  #     # These ports are in format <host-port>:<container-port>
-  #     - '8080:80' # Public HTTP Port
-  #     - '444:443' # Public HTTPS Port
-  #     - '81:81' # Admin Web Port
-  #     - '33080:33080'
-  #     # Add any other Stream port you want to expose
-  #     # - '21:21' # FTP
-  #   environment:
-  #     # Postgres parameters:
-  #     DB_POSTGRES_HOST: 'postgresql'
-  #     DB_POSTGRES_PORT: '5432'
-  #     DB_POSTGRES_USER: 'nelson'
-  #     DB_POSTGRES_PASSWORD: 'Nel@90054934'
-  #     DB_POSTGRES_NAME: 'npm'
-
-  #     # Uncomment this if IPv6 is not enabled on your host
-  #     # DISABLE_IPV6: 'true'
-  #   volumes:
-  #     - /volume2/docker/npm/data:/data
-  #     - /volume2/docker/npm/letsencrypt:/etc/letsencrypt
-  #   networks:
-  #     - npm_proxy_network
+      #- NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=false
+      - SKIP_IP_RANGES=false # trust cloudflare proxy
+      - INITIAL_ADMIN_EMAIL=nelson@sretw.com
+      - INITIAL_ADMIN_PASSWORD=<YOUR_LOGIN_PASSWORD>
+    network_mode: host # must set to host in order to receive client ip
+    # networks:
+    #   - npm_proxy_network
 
   dozzle:
     image: amir20/dozzle:latest
@@ -74,55 +47,35 @@ services:
 
   ####
   ## Crowdsec with nginx proxy manager
-  ## Use for reverse proxy security e.g bouncer
-  ##
   ## Example: https://github.com/crowdsecurity/example-docker-compose/tree/main/npm
-  ## Tutorial: https://www.crowdsec.net/blog/web-server-security-with-npmplus-and-crowdsec
   crowdsec:
     image: docker.io/crowdsecurity/crowdsec:latest
     container_name: "crowdsec"
     restart: unless-stopped
+    depends_on:
+      - npmplus
     security_opt:
       - no-new-privileges=true
+    ports:
+      - "127.0.0.1:8082:8080"
+      - "127.0.0.1:7422:7422"
     environment:
-      - COLLECTIONS=ZoeyVid/npmplus # https://github.com/ZoeyVid/NPMplus?tab=readme-ov-file#crowdsec
+      - COLLECTIONS=ZoeyVid/npmplus
       - TZ=Asia/Taipei
     volumes:
       - /volume2/docker/crowdsec/data:/var/lib/crowdsec/data/
       - /volume2/docker/crowdsec:/etc/crowdsec/
-      - /volume2/docker/crowdsec/acquis:/etc/crowdsec/acquis.d
+      - /volume2/docker/crowdsec/acquis.d:/etc/crowdsec/acquis.d
       - /volume2/docker/npmplus/data/nginx:/opt/npmplus/nginx:ro
     networks:
       - npm_proxy_network
 
-  ####
-  ## Prometheus
-  ## https://prometheus.io/
-  ##
-  ## Scraping log data and provide data for visualizatoin with grafana
-  ##
-  ## Crowdsec provide prometheus endpoint on port 6060
-  ## https://docs.crowdsec.net/docs/observability/prometheus/
-  ##
-  ## Configure for crowdsec
-  ## https://prometheus.io/docs/prometheus/latest/configuration/configuration/
-  ## 1. create a file `prometheus.yml` under prometheus directory
-  ## 2. add following to the file where target need to point to crowdsec's prometheus
-  ## endpoint
-  #
-  # global:
-  #   scrape_interval: 10s
-  # scrape_configs:
-  #   - job_name: 'crowdsec'
-  #     static_configs:
-  #       - targets: ['crowdsec:6060']
-  #         labels:
-  #           machine: 'crowdsec'
-  ## 3. restart crowdsec
   prometheus:
     image: prom/prometheus
     container_name: "prometheus"
     restart: unless-stopped
+    depends_on:
+      - crowdsec
     user: "root"
     ports:
       - "9090:9090"
@@ -132,20 +85,12 @@ services:
     networks:
       - npm_proxy_network
 
-  ####
-  ## VictoriaMetrics
-  ## https://victoriametrics.com/
-  ##
-  ## Similar to Prometheus but crowdsec will push log to VictoriaMetrics and it will
-  ## provide data for visualization with grafana
-  ##
-  ## Tutorial to setup with crowdsec:
-  ##  - https://freefd.github.io/articles/8_cyber_threat_insights_with_crowdsec_victoriametrics_and_grafana/
-  ##  - https://blog.lrvt.de/grafana-dashboard-for-crowdsec-cyber-threat-intelligence-insights/
   victoriametrics:
     image: victoriametrics/victoria-metrics:latest
     container_name: "victoriametrics"
     restart: unless-stopped
+    depends_on:
+      - crowdsec
     ports:
       - "8428:8428"
     volumes:
@@ -153,19 +98,13 @@ services:
     networks:
       - npm_proxy_network
 
-  ####
-  ## Grafana
-  ## https://grafana.com/products/cloud/?src=ggl-s&mdm=cpc&camp=b-grafana-exac-apac&cnt=118051266643&trm=grafana&device=c&gad_campaignid=12447384233
-  ## Visualization tool
-  ##
-  ## 1. Add data source in grafana dashboard for Prometheus and VictoriaMetrics
-  ## 2. Add grafana dashboard json file for Crowdsec
-  ##  https://github.com/crowdsecurity/grafana-dashboards
-  ## 3. Search dashboard ID in grafana while importing dashboard for VictoriaMetrics
   grafana:
     image: grafana/grafana
     container_name: "grafana"
     restart: unless-stopped
+    depends_on:
+      - prometheus
+      - victoriametrics
     ports:
       - "3001:3000"
     volumes:
@@ -174,5 +113,6 @@ services:
       - npm_proxy_network
 
 networks:
+  # make sure docker has npm_proxy_network setup
   npm_proxy_network:
     external: true

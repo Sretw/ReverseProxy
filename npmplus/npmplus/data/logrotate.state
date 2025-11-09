@@ -1,0 +1,4 @@
+logrotate state -- version 2
+"/data/nginx/access.log" 2025-11-8-10:20:22
+"/data/nginx/error.log" 2025-11-8-10:20:22
+"/data/nginx/stream.log" 2025-11-7-10:0:0

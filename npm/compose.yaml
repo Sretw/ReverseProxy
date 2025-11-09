@@ -1,0 +1,136 @@
+services:
+  ####
+  ## Nginx Proxy Manager Plus
+  ## https://github.com/ZoeyVid/NPMplus
+  ## Enhanced Nginx Proxy Manager
+  ## 
+  ## Replace vanilla Nginx Proxy Manager in order to work with Crowdsec 
+  # npmplus:
+  #   container_name: npm
+  #   image: docker.io/zoeyvid/npmplus:latest # or ghcr.io/zoeyvid/npmplus:latest
+  #   restart: always
+  #   cap_add:
+  #     - NET_ADMIN
+  #   ports:
+  #     - '8080:80' # Public HTTP Port
+  #     - '444:443' # Public HTTPS Port
+  #     - '81:81' # Admin Web Port
+  #     - '33080:33080' # For netbird relay
+  #   volumes:
+  #     - /volume2/docker/npmplus/data:/data
+  #     # - /volume2/docker/npm/letsencrypt:/etc/letsencrypt # Only needed for first time migration from original nginx-proxy-manager to this fork, remove after migration
+  #     # - "shm-volume:/dev/shm/check-point" # required if you want to use the openappsec attachment module, also enable this volume at the end of this compose.yaml
+  #   environment:
+  #     - TZ=Asia/Taipei # set timezone, required, set it to one of the values from the "TZ identifier" https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
+  #     - ACME_EMAIL=nelson@sretw.com # email address which should be used for acme, currently optional, may be required in the future, so I recommend you to enter your email here, optional for letsencrypt, but required for zerossl and google public ca
+  #     - LOGROTATE=true # for crowdsec https://www.crowdsec.net/blog/web-server-security-with-npmplus-and-crowdsec or https://github.com/ZoeyVid/NPMplus?tab=readme-ov-file#crowdsec
+  #     #- NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=false
+  #     #- SKIP_IP_RANGES=false
+  #   networks:
+  #     - npm_proxy_network
+
+  ####
+  ## Valina Nginx Proxy Manager
+  npm:
+    image: lepresidente/nginxproxymanager:latest
+    container_name: "npm"
+    restart: always
+    cap_add:
+      - NET_ADMIN
+      - NET_BIND_SERVICE
+    ports:
+      # These ports are in format <host-port>:<container-port>
+      - '8080:80' # Public HTTP Port
+      - '444:443' # Public HTTPS Port
+      - '81:81' # Admin Web Port
+      - '33080:33080'
+      # Add any other Stream port you want to expose
+      # - '21:21' # FTP
+    environment:
+      # Postgres parameters:
+      DB_POSTGRES_HOST: 'postgresql'
+      DB_POSTGRES_PORT: '5432'
+      DB_POSTGRES_USER: 'nelson'
+      DB_POSTGRES_PASSWORD: 'Nel@90054934'
+      DB_POSTGRES_NAME: 'npm'
+
+      # Uncomment this if IPv6 is not enabled on your host
+      # DISABLE_IPV6: 'true'
+    volumes:
+      - /volume2/docker/npm/data:/data
+      - /volume2/docker/npm/letsencrypt:/etc/letsencrypt
+    networks:
+      - npm_proxy_network
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - npm_proxy_network
+
+  ####
+  ## Crowdsec with nginx proxy manager
+  ## Example: https://github.com/crowdsecurity/example-docker-compose/tree/main/npm
+  crowdsec:
+    image: crowdsecurity/crowdsec
+    container_name: "crowdsec"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges=true
+    ports:
+      - "8082:8080"
+      - "7422:7422"
+    environment:
+      - COLLECTIONS=crowdsecurity/nginx-proxy-manager
+      - TZ=Asia/Taipei
+    volumes:
+      - /volume2/docker/crowdsec/data:/var/lib/crowdsec/data/
+      - /volume2/docker/crowdsec:/etc/crowdsec/
+      - /volume2/docker/crowdsec/acquis:/etc/crowdsec/acquis.d
+      - /volume2/docker/npmplus/data/nginx:/opt/npmplus/nginx:ro
+    networks:
+      - npm_proxy_network
+
+  prometheus:
+    image: prom/prometheus
+    container_name: "prometheus"
+    restart: unless-stopped
+    user: "root"
+    ports:
+      - "9090:9090"
+    volumes:
+      - /volume2/docker/prometheus:/etc/prometheus
+      - /volume2/docker/prometheus/data:/prometheus
+    networks:
+      - npm_proxy_network
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: "victoriametrics"
+    restart: unless-stopped
+    ports:
+      - "8428:8428"
+    volumes:
+      - /volume2/docker/victoriametrics:/victoria-metrics-data
+    networks:
+      - npm_proxy_network
+
+  grafana:
+    image: grafana/grafana
+    container_name: "grafana"
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    volumes:
+      - /volume2/docker/grafana:/var/lib/grafana
+    networks:
+      - npm_proxy_network
+    
+networks:
+  npm_proxy_network:
+    external: true
