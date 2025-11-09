@@ -3,8 +3,8 @@ services:
   ## Nginx Proxy Manager Plus
   ## https://github.com/ZoeyVid/NPMplus
   ## Enhanced Nginx Proxy Manager
-  ## 
-  ## Replace vanilla Nginx Proxy Manager in order to work with Crowdsec 
+  ##
+  ## Replace vanilla Nginx Proxy Manager in order to work with Crowdsec
   # npmplus:
   #   container_name: npm
   #   image: docker.io/zoeyvid/npmplus:latest # or ghcr.io/zoeyvid/npmplus:latest
@@ -40,19 +40,19 @@ services:
       - NET_BIND_SERVICE
     ports:
       # These ports are in format <host-port>:<container-port>
-      - '8080:80' # Public HTTP Port
-      - '444:443' # Public HTTPS Port
-      - '81:81' # Admin Web Port
-      - '33080:33080'
+      - "8080:80" # Public HTTP Port
+      - "444:443" # Public HTTPS Port
+      - "81:81" # Admin Web Port
+      - "33080:33080"
       # Add any other Stream port you want to expose
       # - '21:21' # FTP
     environment:
       # Postgres parameters:
-      DB_POSTGRES_HOST: 'postgresql'
-      DB_POSTGRES_PORT: '5432'
-      DB_POSTGRES_USER: 'nelson'
-      DB_POSTGRES_PASSWORD: 'Nel@90054934'
-      DB_POSTGRES_NAME: 'npm'
+      DB_POSTGRES_HOST: "postgresql"
+      DB_POSTGRES_PORT: "5432"
+      DB_POSTGRES_USER: "nelson"
+      DB_POSTGRES_PASSWORD: "<YOUR_POSTGRES_PASSWORD>"
+      DB_POSTGRES_NAME: "npm"
 
       # Uncomment this if IPv6 is not enabled on your host
       # DISABLE_IPV6: 'true'
@@ -69,7 +69,7 @@ services:
     ports:
       - "8081:8080"
     volumes:
-     - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - npm_proxy_network
 
@@ -130,7 +130,8 @@ services:
       - /volume2/docker/grafana:/var/lib/grafana
     networks:
       - npm_proxy_network
-    
+
 networks:
+  # make sure npm_proxy_network is setup in docker
   npm_proxy_network:
     external: true
